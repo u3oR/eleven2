@@ -2,7 +2,9 @@
 
 Why is it called eleven2 ?
 Because 2^11=2048   ;-)
-
+<p align = "center">
+	<img alt="ScrcpyWidget" src="image/2048.png">
+<br><br>
 ## 概述
 
 ![image-20221003204237256](image/readme/image-20221003204237256.png)
