@@ -1,19 +1,24 @@
 # 2048 Game using lvgl (no animation)
 
 <p align = "center">
-	<img alt="ScrcpyWidget" src="image/2048.png">
+	<img src="image/2048.png">
 <br><br>
 Why is it called eleven2 ?  -Because 2^11=2048   ;-)
+
 
 
 
 ## 概述	
 
 ​	这个项目是我了解使用lvgl做的一个简单demo。如果了解过Qt的话就布局来说还是挺简单的。lvgl在keil中也有包，可以直接拿来调用，非常方便。
+
 ​	这个工程仅使用了一些简单的组件构建。就工程本身的难度来说可能连入门都算不到，只是熟悉了一些用法而已。
+
 ​	阅读lvgl本身提供的demo是一个非常不错的选择，各种实现都非常清晰。期待与大家一起进步😄
 
-![image-20221003204237256](image/readme/image-20221003204237256.png)
+<p align = "center">
+	<img src="image/readme/image-20221003204237256.png">
+<br><br>
 
 ## 看板
 
