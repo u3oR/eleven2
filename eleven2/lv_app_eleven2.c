@@ -133,24 +133,53 @@ void move(Block B[ROW][COLUMN],unsigned char d) {
             for (uint8_t j = k; j < COLUMN; j++) {
                 B[i][j].val = 0;
             }
-            
         }
         break;
     case 2/*S*/:
-        for (uint8_t i = ROW - 1; i > 0; i--) {
-            for (uint8_t j = 0; j < COLUMN; j++) {
+        for (int i = ROW - 1; i >= 0; i--) {
+            for (int j = 0; j < COLUMN; j++) {
                 if ((B[i][j].val == B[i - 1][j].val) && (B[i][j].val != 0)) {
                     B[i][j].val += 1;
                     B[i-1][j].val = 0;
                 }
             }
         }
-
+        for (int i = ROW-1; i >= 0; i--)
+        {
+            int k = ROW - 1;
+            for (int j = 0; j < COLUMN; j++)
+            {
+                if (B[i][j].val != 0) {
+                    B[k--][j].val = B[i][j].val;
+                }
+            }
+            for (int j = k; j >= 0; j--)
+            {
+                B[i][j].val = 0;
+            }
+        }
         break;
     case 3/*D*/:
         for (uint8_t i = 0; i < ROW - 1; i++) {
-            for (uint8_t j = 0; j < COLUMN; j++) {
-
+            for (uint8_t j = 1; j < COLUMN - 1; j++) {
+                if (B[i][ROW-1-j].val == B[i][ROW-1-j-1].val && B[i][ROW - 1 - j].val != 0) {
+                    B[i][ROW - 1 - j].val += 1;
+                    B[i][ROW - 1 - j - 1].val = 0;
+                }
+            }
+        }
+        for (uint8_t i = 0; i < ROW; i++)
+        {
+            int k = ROW - 1;
+            for (int j = 0; j < COLUMN - 1; j++)
+            {
+                if (B[i][COLUMN-1-j].val != 0) {
+                    B[i][k--].val = B[i][COLUMN - 1 - j].val;
+                }
+            }
+            for (int j = k; j >= 0; j--)
+            {
+                B[i][j].val = 0;
             }
         }
         break;
@@ -162,7 +191,7 @@ void move(Block B[ROW][COLUMN],unsigned char d) {
  * @brief 刷新方块颜色，刷新色块文本颜色
  * @param B 
 */
-void update(Block B[ROW][COLUMN]){
+void update(Block B[ROW][COLUMN]) {
 
     for (uint8_t i = 0; i < ROW; i++) {
         for (uint8_t j = 0; j < COLUMN; j++) {
