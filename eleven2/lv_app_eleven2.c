@@ -50,6 +50,10 @@ typedef struct {
 
 Block Blocks[ROW][COLUMN];
 
+/**
+ * @brief 清空数值,和颜色
+ * @param B 
+*/
 void init(Block B[ROW][COLUMN]) {
 
     for (uint8_t i = 0; i < ROW; i++) {
@@ -86,7 +90,7 @@ void create(Block B[ROW][COLUMN]) {
 
 }
 /**
- * @brief 
+ * @brief 移动方块
  * @param B 
  * @param d 
 */
@@ -160,21 +164,22 @@ void move(Block B[ROW][COLUMN],unsigned char d) {
         }
         break;
     case 3/*D*/:
-        for (uint8_t i = 0; i < ROW - 1; i++) {
-            for (uint8_t j = 1; j < COLUMN - 1; j++) {
-                if (B[i][ROW-1-j].val == B[i][ROW-1-j-1].val && B[i][ROW - 1 - j].val != 0) {
-                    B[i][ROW - 1 - j].val += 1;
-                    B[i][ROW - 1 - j - 1].val = 0;
+        for (uint8_t i = 0; i < ROW; i++) {
+            for (uint8_t j = COLUMN - 1; j >= 1; j--)
+            {
+                if (B[i][j].val == B[i][j-1].val && B[i][j].val != 0) {
+                    B[i][j].val += 1;
+                    B[i][j - 1].val = 0;
                 }
             }
         }
         for (uint8_t i = 0; i < ROW; i++)
         {
             int k = ROW - 1;
-            for (int j = 0; j < COLUMN - 1; j++)
+            for (uint8_t j = COLUMN - 1; j >= 0; j--)
             {
-                if (B[i][COLUMN-1-j].val != 0) {
-                    B[i][k--].val = B[i][COLUMN - 1 - j].val;
+                if (B[i][j].val != 0) {
+                    B[i][k--].val = B[i][j].val;
                 }
             }
             for (int j = k; j >= 0; j--)
@@ -195,15 +200,17 @@ void update(Block B[ROW][COLUMN]) {
 
     for (uint8_t i = 0; i < ROW; i++) {
         for (uint8_t j = 0; j < COLUMN; j++) {
+            /*读取数值对应的颜色*/
             B[i][j].color = ELEVEN2_BLOCK_COLOR(B[i][j].val);
-            
+            /*方块有值则赋值*/
             if (B[i][j].val != 0) {
                 lv_label_set_text_fmt(B[i][j].label, "%ld", 1 << B[i][j].val);
             }
+            /*方块无值则显示空格(不显示数值)*/
             else{
                 lv_label_set_text_fmt(B[i][j].label, " ");
             }
-
+            /*更新方块的样色*/
             lv_obj_set_style_bg_color(
                 B[i][j].block,
                 lv_color_hex(B[i][j].color),
@@ -212,32 +219,6 @@ void update(Block B[ROW][COLUMN]) {
             
         }
     }
-}
-/**
- * @brief 
- * @param B 
- * @return -1:game over,0:,1:
-*/
-int check(Block B[ROW][COLUMN]) {
-
-    for (size_t i = 0; i < 4; i++)
-    {
-        for (size_t j = 0; j < 3; j++)
-        {
-            if (B[i][j].val == B[i][j + 1].val)
-                return 0;
-        }
-    }
-    for (size_t i = 0; i < 3; i++)
-    {
-        for (size_t j = 0; j < 4; j++)
-        {
-            if (B[i][j].val == B[i + 1][j].val)
-                return 0;
-        }
-    }
-    return 1;
-
 }
 
 /**********************
@@ -363,21 +344,18 @@ static void eleven2_menu_create(lv_obj_t* parent) {
 */
 static void eleven2_mainwindow_create(lv_obj_t* parent) {
 
-    //mainwindow容器样式
+    
+    /*mainwindow背景样式*/
     lv_obj_set_style_bg_color(parent, lv_color_hex(ELEVEN2_THEME_BLOCK_BG), 0);/*背景颜色*/
     lv_obj_set_style_pad_gap(parent, 7, 0);/*方块间距*/
     lv_obj_set_layout(parent, LV_LAYOUT_GRID);/*方格布局*/
 
-    //用于块样式
-    static lv_style_t block_style;
-    lv_style_init(&block_style);
-    lv_style_set_bg_color(&block_style, lv_color_hex(ELEVEN2_BLOCK_COLOR(0)));
-    
-    //Grid Layout
+    /*为16个方块生成布局*/
     static lv_coord_t col_dsc[] = { LV_GRID_FR(1), LV_GRID_FR(1), LV_GRID_FR(1), LV_GRID_FR(1), LV_GRID_TEMPLATE_LAST }; 
     static lv_coord_t row_dsc[] = { LV_GRID_FR(1), LV_GRID_FR(1), LV_GRID_FR(1), LV_GRID_FR(1), LV_GRID_TEMPLATE_LAST }; 
     lv_obj_set_grid_dsc_array(parent, col_dsc, row_dsc);
 
+    /*设置生成16个方块*/
     for (uint8_t i = 0; i < ROW; i++)
     {
         for (uint8_t j = 0; j < COLUMN; j++)
@@ -391,7 +369,6 @@ static void eleven2_mainwindow_create(lv_obj_t* parent) {
             Blocks[i][j].label = lv_label_create(Blocks[i][j].block);
             lv_label_set_text_fmt(Blocks[i][j].label, " ");
             lv_obj_center(Blocks[i][j].label);
-            //lv_obj_add_style(score, &score_style, 0);
             /*Grid Layout*/
             eleven2_obj_set_grid_cell(Blocks[i][j].block, i, j, 1, 1, LV_GRID_ALIGN_STRETCH, LV_GRID_ALIGN_STRETCH);
         }
@@ -415,18 +392,23 @@ static void eleven2_mainwindow_create(lv_obj_t* parent) {
  * @param parent 
 */
 static void eleven2_ctrl_buttons_create(lv_obj_t* parent) {
+
     /*BackGround*/
     lv_obj_set_style_bg_color(
         parent,
-        lv_color_hex(ELEVEN2_THEME_BLOCK_BG),0);
+        lv_color_hex(ELEVEN2_THEME_BLOCK_BG),
+        0
+    );
     lv_obj_set_style_pad_gap(parent, 3, 0);/*方块间距*/
     lv_obj_set_style_outline_width(parent, 0, 0);
     lv_obj_set_layout(parent, LV_LAYOUT_GRID);/*方格布局*/
+
     /*网格布局:两行三列*/
     static lv_coord_t col_dsc[] = { LV_GRID_FR(1), LV_GRID_FR(1), LV_GRID_FR(1), LV_GRID_TEMPLATE_LAST };
     static lv_coord_t row_dsc[] = { LV_GRID_FR(1), LV_GRID_FR(1), LV_GRID_TEMPLATE_LAST };
     lv_obj_set_grid_dsc_array(parent, col_dsc, row_dsc);
-    /*  */
+
+    /*设置WASD按钮及样式*/
     static lv_obj_t* ctrl_button[4];
     lv_obj_t* _txt;
     for (uint8_t i = 0; i < 4; i++) {
@@ -469,7 +451,6 @@ static void eleven2_ctrl_buttons_create(lv_obj_t* parent) {
         lv_obj_center(_txt);
         //按钮事件回调
         lv_obj_add_event_cb(ctrl_button[i],eleven2_ctrl_button_event_callback,LV_EVENT_ALL,i);
-
     }
 }
 
@@ -521,6 +502,8 @@ static void eleven2_ctrl_button_event_callback(lv_event_t* e) {
                 move(Blocks, 3);
                 break;
         }
+        /*移动完方块后创建新的方块并更新布局*/
+        move(Blocks, _para);
         create(Blocks);
         update(Blocks);
         lv_label_set_text_fmt(eleven2mgmt_curtScore, "%d", eleven2mgmt_data_score);
