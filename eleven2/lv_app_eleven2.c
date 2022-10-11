@@ -140,24 +140,26 @@ void move(Block B[ROW][COLUMN],unsigned char d) {
         }
         break;
     case 2/*S*/:
-        for (int i = ROW - 1; i >= 0; i--) {
-            for (int j = 0; j < COLUMN; j++) {
+        for (uint8_t j = 0; j < COLUMN; j++)
+        {
+            for (int8_t i = ROW - 1; i >= 0; i--)
+            {
                 if ((B[i][j].val == B[i - 1][j].val) && (B[i][j].val != 0)) {
                     B[i][j].val += 1;
-                    B[i-1][j].val = 0;
+                    B[i - 1][j].val = 0;
                 }
             }
         }
-        for (int i = ROW-1; i >= 0; i--)
+        for (uint8_t j = 0; j < COLUMN; j++)
         {
             int k = ROW - 1;
-            for (int j = 0; j < COLUMN; j++)
+            for (int8_t i = ROW - 1; i >= 0; i--)
             {
                 if (B[i][j].val != 0) {
                     B[k--][j].val = B[i][j].val;
                 }
             }
-            for (int j = k; j >= 0; j--)
+            for (int8_t i = k; i >= 0; i--)
             {
                 B[i][j].val = 0;
             }
@@ -176,13 +178,13 @@ void move(Block B[ROW][COLUMN],unsigned char d) {
         for (uint8_t i = 0; i < ROW; i++)
         {
             int k = ROW - 1;
-            for (uint8_t j = COLUMN - 1; j >= 0; j--)
+            for (int8_t j = COLUMN - 1; j >= 0; j--)
             {
                 if (B[i][j].val != 0) {
                     B[i][k--].val = B[i][j].val;
                 }
             }
-            for (int j = k; j >= 0; j--)
+            for (int8_t j = k; j >= 0; j--)
             {
                 B[i][j].val = 0;
             }
