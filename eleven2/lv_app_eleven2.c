@@ -76,18 +76,13 @@ void create(Block B[ROW][COLUMN]) {
             }
         }
     }
-    /*多于两个空位置就在里面随机挑两个填入数值*/
-    if (cnt >= 2) {
+    /*在随机空位置里面填入随机(only 2 or 4)数值*/
+    if (cnt) {
+        //获取空白位置
         uint16_t p1 = lv_rand(0, cnt);
-        uint16_t p2 = lv_rand(0, cnt);
-        Blocks[(pos[p1 - 1] / 4)][(pos[p1 - 1] % 4)].val = lv_rand(1, 2);
-        Blocks[(pos[p2 - 1] / 4)][(pos[p2 - 1] % 4)].val = lv_rand(1, 2);
+        //空白位置赋值
+        Blocks[(pos[p1 - 1] / 4)][(pos[p1 - 1] % 4)].val = lv_rand(0, 9) < 7 ? 1 : 2; 
     }
-    /*只剩下一个空位置就在这个空位置里面填入数值*/
-    else if(cnt == 1) {
-        Blocks[(pos[0] / 4)][(pos[0] % 4)].val = lv_rand(1, 2);
-    }
-
 }
 /**
  * @brief 移动方块
