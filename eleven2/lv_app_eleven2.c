@@ -77,11 +77,11 @@ void create(Block B[ROW][COLUMN]) {
         }
     }
     /*在随机空位置里面填入随机(only 2 or 4)数值*/
-    if (cnt) {
+    if (cnt > 0) {
         //获取空白位置
         uint16_t p1 = lv_rand(0, cnt);
         //空白位置赋值
-        Blocks[(pos[p1 - 1] / 4)][(pos[p1 - 1] % 4)].val = lv_rand(0, 9) < 7 ? 1 : 2; 
+        Blocks[((pos[p1] - 1) / 4)][((pos[p1] - 1) % 4)].val = lv_rand(0, 9) < 7 ? 1 : 2;
     }
 }
 /**
