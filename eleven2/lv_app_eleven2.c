@@ -41,8 +41,186 @@ static uint32_t  eleven2mgmt_data_score = 0;
 /*********************
 *  Block 
 *********************/
+struct Box_layout
+{
+    lv_obj_t* box[4][4];
+    lv_obj_t* curt_score;
+    lv_obj_t* best_score;
+};
+
+struct box_base {
+    uint16_t value;
+    uint8_t dir : 4;
+    uint8_t dis : 4;
+};
+struct Box{
+    struct box_base box[4][4];
+    struct box_base box_backup[4][4];
+    uint32_t curt_score;
+    uint32_t best_score;
+};
+
+void box_init(struct Box* Box)
+{
+    Box->curt_score = 0;
+    for (uint8_t i = 0; i < ROW; i++) {
+        for (uint8_t j = 0; j < COLUMN; j++) {
+            Box->box_backup[i][j].value = 0;
+            Box->box[i][j].value = 0;
+        }
+    }
+}
+
+void box_backup(struct Box* Box)
+{
+    memcpy(Box->box_backup, Box->box, sizeof(struct box_base) * 16);
+    //for (uint8_t i = 0; i < ROW; i++) {
+    //    for (uint8_t j = 0; j < COLUMN; j++) {
+    //        Box->box_backup[i][j].value = Box->box[i][j].value;
+    //    }
+    //}
+}
+
+int box_is_same(struct Box *Box)
+{
+    for (uint8_t i = 0; i < ROW; i++) {
+        for (uint8_t j = 0; j < COLUMN; j++) {
+            if (Box->box[i][j].value != Box->box_backup[i][j].value) {
+                return 0;
+            }
+        }
+    }
+    return 1;
+}
+
+void box_create(struct Box* Box)
+{
+    uint16_t cnt = 0;
+    uint16_t pos[16] = { 0 };
+    /*把空的位置都找出来放到pos中*/
+    for (uint8_t i = 0; i < ROW; i++) {
+        for (uint8_t j = 0; j < COLUMN; j++) {
+            if (Box->box[i][j].value == 0) {
+                pos[cnt++] = i * 4 + j + 1;
+            }
+        }
+    }
+    /*在随机空位置里面填入随机(only 2 or 4)数值*/
+    if (cnt > 0) {
+        //获取空白位置
+        uint16_t p1 = lv_rand(0, cnt);
+        //空白位置赋值
+        Box->box[((pos[p1] - 1) / 4)]
+                [((pos[p1] - 1) % 4)].value = lv_rand(0, 9) < 7 ? 1 : 2;
+    }
+}
+
+void box_move(struct Box* Box, uint8_t dir)
+{
+    switch (dir)
+    {
+    case 0/*W*/:
+        for (uint8_t i = 0; i < ROW - 1; i++) {
+            for (uint8_t j = 0; j < COLUMN; j++) {
+                if ((Box->box[i][j].value == Box->box[i + 1][j].value) && (Box->box[i][j].value != 0)) {
+                    Box->box[i][j].value += 1;
+                    Box->curt_score += 1 << Box->box[i][j].value;
+                    Box->box[i + 1][j].value = 0;
+                }
+            }
+        }
+        for (uint8_t j = 0; j < COLUMN; j++) {
+            int k = 0;
+            for (uint8_t i = 0; i < ROW; i++) {
+                if (Box->box[i][j].value != 0) {
+                    Box->box[k++][j].value = Box->box[i][j].value;
+                }
+            }
+            for (uint8_t i = k; i < ROW; i++) {
+                Box->box[i][j].value = 0;
+            }
+        }
+        break;
+    case 1/*A*/:
+        for (uint8_t j = 0; j < COLUMN - 1; j++) {
+            for (uint8_t i = 0; i < ROW; i++) {
+                if ((Box->box[i][j].value == Box->box[i][j + 1].value) && (Box->box[i][j].value != 0)) {
+                    Box->box[i][j].value += 1;
+                    Box->curt_score += 1 << Box->box[i][j].value;
+                    Box->box[i][j + 1].value = 0;
+                }
+            }
+        }
+        for (uint8_t i = 0; i < ROW; i++) {
+            int k = 0;
+            for (uint8_t j = 0; j < COLUMN; j++) {
+                if (Box->box[i][j].value != 0) {
+                    Box->box[i][k++].value = Box->box[i][j].value;
+                }
+            }
+            for (uint8_t j = k; j < COLUMN; j++) {
+                Box->box[i][j].value = 0;
+            }
+        }
+        break;
+    case 2/*S*/:
+        for (uint8_t j = 0; j < COLUMN; j++) {
+            for (int8_t i = ROW - 1; i >= 0; i--) {
+                if ((Box->box[i][j].value == Box->box[i - 1][j].value) && (Box->box[i][j].value != 0)) {
+                    Box->box[i][j].value += 1;
+                    Box->curt_score += 1 << Box->box[i][j].value;
+                    Box->box[i - 1][j].value = 0;
+                }
+            }
+        }
+        for (uint8_t j = 0; j < COLUMN; j++)
+        {
+            int k = ROW - 1;
+            for (int8_t i = ROW - 1; i >= 0; i--) {
+                if (Box->box[i][j].value != 0) {
+                    Box->box[k--][j].value = Box->box[i][j].value;
+                }
+            }
+            for (int8_t i = k; i >= 0; i--) {
+                Box->box[i][j].value = 0;
+            }
+        }
+        break;
+    case 3/*D*/:
+        for (uint8_t i = 0; i < ROW; i++) {
+            for (uint8_t j = COLUMN - 1; j >= 1; j--) {
+                if (Box->box[i][j].value == Box->box[i][j - 1].value && Box->box[i][j].value != 0) {
+                    Box->box[i][j].value += 1;
+                    Box->curt_score += 1 << Box->box[i][j].value;
+                    Box->box[i][j - 1].value = 0;
+                }
+            }
+        }
+        for (uint8_t i = 0; i < ROW; i++) {
+            int k = ROW - 1;
+            for (int8_t j = COLUMN - 1; j >= 0; j--) {
+                if (Box->box[i][j].value != 0) {
+                    Box->box[i][k--].value = Box->box[i][j].value;
+                }
+            }
+            for (int8_t j = k; j >= 0; j--) {
+                Box->box[i][j].value = 0;
+            }
+        }
+        break;
+    default/*None*/:
+        break;
+    }
+}
+
+void box_update(struct Box* Box, struct Box_layout *layout)
+{
+
+}
+
+/****************************************************************************/
 typedef struct {
-    lv_obj_t *block;
+    lv_obj_t* block;
     lv_label_t* label;
     uint16_t val;
     uint32_t color;
@@ -222,12 +400,10 @@ void update(Block B[ROW][COLUMN])
         for (uint8_t j = 0; j < COLUMN; j++) {
             /*读取数值对应的颜色*/
             B[i][j].color = ELEVEN2_BLOCK_COLOR(B[i][j].val);
-            /*方块有值则赋值*/
+            /*方块有值则赋值,无值则显示空格(不显示数值)*/
             if (B[i][j].val != 0) {
                 lv_label_set_text_fmt(B[i][j].label, "%ld", 1 << B[i][j].val);
-            }
-            /*方块无值则显示空格(不显示数值)*/
-            else{
+            } else {
                 lv_label_set_text_fmt(B[i][j].label, " ");
             }
             /*更新方块的样色*/
