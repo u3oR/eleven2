@@ -10,7 +10,7 @@
 #include "lv_app_eleven2.h"
 #include "stdio.h"
 #include "math.h"
-
+#include "string.h"
 /*********************
 *  DEFINES / TYPEDEF
 *********************/
@@ -49,15 +49,38 @@ typedef struct {
 } Block;
 
 Block Blocks[ROW][COLUMN];
+Block Blocks_Backup[ROW][COLUMN];
+
+bool is_same(Block B_Dst[ROW][COLUMN], Block B_Src[ROW][COLUMN])
+{
+    for (uint8_t i = 0; i < ROW; i++) {
+        for (uint8_t j = 0; j < COLUMN; j++) {
+            if (B_Dst[i][j].val != B_Src[i][j].val) {
+                return false;
+            }
+        }
+    }
+    return true;
+}
+
+void backup(Block B_Backup[ROW][COLUMN], Block B_Src[ROW][COLUMN])
+{
+    //memcpy(B_Backup, B_Src, sizeof(B_Src));
+    for (uint8_t i = 0; i < ROW; i++) {
+        for (uint8_t j = 0; j < COLUMN; j++) {
+            B_Backup[i][j].val = B_Src[i][j].val;
+        }
+    }
+}
 
 /**
  * @brief 清空数值,和颜色
  * @param B 
 */
-void init(Block B[ROW][COLUMN]) {
+void init(Block B[ROW][COLUMN])
+{
 
     for (uint8_t i = 0; i < ROW; i++) {
-
         for (uint8_t j = 0; j < COLUMN; j++) {
             B[i][j].val    = 0;
             B[i][j].color  = ELEVEN2_BLOCK_COLOR(0);
@@ -65,7 +88,8 @@ void init(Block B[ROW][COLUMN]) {
     }
 }
 
-void create(Block B[ROW][COLUMN]) {
+void create(Block B[ROW][COLUMN])
+{
     uint16_t cnt = 0;
     uint16_t pos[16] = {0};
     /*把空的位置都找出来放到pos中*/
@@ -89,7 +113,10 @@ void create(Block B[ROW][COLUMN]) {
  * @param B 
  * @param d 
 */
-void move(Block B[ROW][COLUMN],unsigned char d) {
+void move(Block B[ROW][COLUMN],unsigned char d)
+{
+    backup(Blocks_Backup, Blocks);
+
     switch (d)
     {
     case 0/*W*/:
@@ -97,6 +124,7 @@ void move(Block B[ROW][COLUMN],unsigned char d) {
             for (uint8_t j = 0; j < COLUMN; j++) {
                 if ((B[i][j].val == B[i + 1][j].val) && (B[i][j].val != 0)) {
                     B[i][j].val += 1;
+                    eleven2mgmt_data_score += 1 << B[i][j].val;
                     B[i + 1][j].val = 0;
                 }
             }
@@ -118,6 +146,7 @@ void move(Block B[ROW][COLUMN],unsigned char d) {
             for (uint8_t i = 0; i < ROW; i++) {
                 if ((B[i][j].val == B[i][j + 1].val) && (B[i][j].val != 0)) {
                     B[i][j].val += 1;
+                    eleven2mgmt_data_score += 1 << B[i][j].val;
                     B[i][j+1].val = 0;
                 }
             }
@@ -135,12 +164,11 @@ void move(Block B[ROW][COLUMN],unsigned char d) {
         }
         break;
     case 2/*S*/:
-        for (uint8_t j = 0; j < COLUMN; j++)
-        {
-            for (int8_t i = ROW - 1; i >= 0; i--)
-            {
+        for (uint8_t j = 0; j < COLUMN; j++) {
+            for (int8_t i = ROW - 1; i >= 0; i--) {
                 if ((B[i][j].val == B[i - 1][j].val) && (B[i][j].val != 0)) {
                     B[i][j].val += 1;
+                    eleven2mgmt_data_score += 1 << B[i][j].val;
                     B[i - 1][j].val = 0;
                 }
             }
@@ -148,39 +176,34 @@ void move(Block B[ROW][COLUMN],unsigned char d) {
         for (uint8_t j = 0; j < COLUMN; j++)
         {
             int k = ROW - 1;
-            for (int8_t i = ROW - 1; i >= 0; i--)
-            {
+            for (int8_t i = ROW - 1; i >= 0; i--) {
                 if (B[i][j].val != 0) {
                     B[k--][j].val = B[i][j].val;
                 }
             }
-            for (int8_t i = k; i >= 0; i--)
-            {
+            for (int8_t i = k; i >= 0; i--) {
                 B[i][j].val = 0;
             }
         }
         break;
     case 3/*D*/:
         for (uint8_t i = 0; i < ROW; i++) {
-            for (uint8_t j = COLUMN - 1; j >= 1; j--)
-            {
+            for (uint8_t j = COLUMN - 1; j >= 1; j--) {
                 if (B[i][j].val == B[i][j-1].val && B[i][j].val != 0) {
                     B[i][j].val += 1;
+                    eleven2mgmt_data_score += 1 << B[i][j].val;
                     B[i][j - 1].val = 0;
                 }
             }
         }
-        for (uint8_t i = 0; i < ROW; i++)
-        {
+        for (uint8_t i = 0; i < ROW; i++) {
             int k = ROW - 1;
-            for (int8_t j = COLUMN - 1; j >= 0; j--)
-            {
+            for (int8_t j = COLUMN - 1; j >= 0; j--) {
                 if (B[i][j].val != 0) {
                     B[i][k--].val = B[i][j].val;
                 }
             }
-            for (int8_t j = k; j >= 0; j--)
-            {
+            for (int8_t j = k; j >= 0; j--) {
                 B[i][j].val = 0;
             }
         }
@@ -193,8 +216,8 @@ void move(Block B[ROW][COLUMN],unsigned char d) {
  * @brief 刷新方块颜色，刷新色块文本颜色
  * @param B 
 */
-void update(Block B[ROW][COLUMN]) {
-
+void update(Block B[ROW][COLUMN])
+{
     for (uint8_t i = 0; i < ROW; i++) {
         for (uint8_t j = 0; j < COLUMN; j++) {
             /*读取数值对应的颜色*/
@@ -500,7 +523,12 @@ static void eleven2_ctrl_button_event_callback(lv_event_t* e) {
                 break;
         }
         /*移动完方块后创建新的方块并更新布局*/
+        LV_LOG_USER("checking update");
         move(Blocks, _para);
+        //if (is_same(Blocks, Blocks_Backup)) {
+        //    LV_LOG_USER("no update");
+        //    return;
+        //}
         create(Blocks);
         update(Blocks);
         lv_label_set_text_fmt(eleven2mgmt_curtScore, "%d", eleven2mgmt_data_score);
