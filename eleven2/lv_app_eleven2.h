@@ -15,7 +15,7 @@ extern "C" {
 *********************/
 
 // #define ELEVEN2_COLOR_MAKE(RGB) (lv_color_t)LV_COLOR_MAKE( (RGB>>16) & 0xFF,(RGB>>8) & 0xFF,(RGB) & 0xFF)
-#define ELEVEN2_COLOR_MAKE_HEX(R,G,B) (uint32_t)((R << 16) + (G << 8) + B)
+
 
 /*--------------
 * App Config
