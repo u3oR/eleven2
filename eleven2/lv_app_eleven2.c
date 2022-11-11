@@ -14,14 +14,17 @@
 /*********************
 *  DEFINES / TYPEDEF
 *********************/
+
+#define ELEVEN2_COLOR_MAKE_HEX(R,G,B) (uint32_t)((R << 16) + (G << 8) + B)
+
 const uint32_t __ELEVEN2_BLOCK_CELL_BG[12] = {
     ELEVEN2_COLOR_MAKE_HEX(205, 193, 180) ,  //1     1<<0
     ELEVEN2_COLOR_MAKE_HEX(238, 228, 218) ,  //2     1<<1
     ELEVEN2_COLOR_MAKE_HEX(238, 225, 201) ,  //4     1<<2
     ELEVEN2_COLOR_MAKE_HEX(243, 178, 122) ,  //8     1<<3
     ELEVEN2_COLOR_MAKE_HEX(246, 150, 100) ,  //16    1<<4
-    ELEVEN2_COLOR_MAKE_HEX(247, 124, 95)  ,  //32    1<<5
-    ELEVEN2_COLOR_MAKE_HEX(247, 100, 61)  ,  //64    1<<6
+    ELEVEN2_COLOR_MAKE_HEX(247, 124,  95) ,  //32    1<<5
+    ELEVEN2_COLOR_MAKE_HEX(247, 100,  61) ,  //64    1<<6
     ELEVEN2_COLOR_MAKE_HEX(237, 208, 115) ,  //128   1<<7
     ELEVEN2_COLOR_MAKE_HEX(237, 208, 115) ,  //256   1<<8
     ELEVEN2_COLOR_MAKE_HEX(237, 208, 115) ,  //512   1<<9
@@ -43,6 +46,8 @@ static uint32_t  eleven2mgmt_data_score = 0;
 *********************/
 struct Box_layout
 {
+    uint16_t  posx[4][4];
+    uint16_t  posy[4][4];
     lv_obj_t* box[4][4];
     lv_obj_t* curt_score;
     lv_obj_t* best_score;
@@ -50,7 +55,7 @@ struct Box_layout
 
 struct box_base {
     uint16_t value;
-    uint8_t dir : 4;
+    uint8_t dir : 4;/*8W4A2S6D*/
     uint8_t dis : 4;
 };
 struct Box{
@@ -69,6 +74,10 @@ void box_init(struct Box* Box)
             Box->box[i][j].value = 0;
         }
     }
+    /* init best_score , may be from eeprom */
+
+    /* load posx and posy */
+
 }
 
 void box_backup(struct Box* Box)
@@ -101,7 +110,7 @@ void box_create(struct Box* Box)
     for (uint8_t i = 0; i < ROW; i++) {
         for (uint8_t j = 0; j < COLUMN; j++) {
             if (Box->box[i][j].value == 0) {
-                pos[cnt++] = i * 4 + j + 1;
+                pos[cnt++] = i * 4 + j;
             }
         }
     }
@@ -110,13 +119,15 @@ void box_create(struct Box* Box)
         //获取空白位置
         uint16_t p1 = lv_rand(0, cnt);
         //空白位置赋值
-        Box->box[((pos[p1] - 1) / 4)]
-                [((pos[p1] - 1) % 4)].value = lv_rand(0, 9) < 7 ? 1 : 2;
+        Box->box[(pos[p1] / 4)]
+                [(pos[p1] % 4)].value = lv_rand(0, 9) < 7 ? 1 : 2;
     }
 }
 
 void box_move(struct Box* Box, uint8_t dir)
 {
+    box_backup(Box);
+
     switch (dir)
     {
     case 0/*W*/:
@@ -124,8 +135,10 @@ void box_move(struct Box* Box, uint8_t dir)
             for (uint8_t j = 0; j < COLUMN; j++) {
                 if ((Box->box[i][j].value == Box->box[i + 1][j].value) && (Box->box[i][j].value != 0)) {
                     Box->box[i][j].value += 1;
-                    Box->curt_score += 1 << Box->box[i][j].value;
+                    Box->box[i][j].dir  = 8;
+                    Box->box[i][j].dis += 1;
                     Box->box[i + 1][j].value = 0;
+                    Box->curt_score += 1 << Box->box[i][j].value;
                 }
             }
         }
@@ -134,6 +147,7 @@ void box_move(struct Box* Box, uint8_t dir)
             for (uint8_t i = 0; i < ROW; i++) {
                 if (Box->box[i][j].value != 0) {
                     Box->box[k++][j].value = Box->box[i][j].value;
+                    Box->box[i][j].dis += j - k;
                 }
             }
             for (uint8_t i = k; i < ROW; i++) {
@@ -146,6 +160,8 @@ void box_move(struct Box* Box, uint8_t dir)
             for (uint8_t i = 0; i < ROW; i++) {
                 if ((Box->box[i][j].value == Box->box[i][j + 1].value) && (Box->box[i][j].value != 0)) {
                     Box->box[i][j].value += 1;
+                    Box->box[i][j].dir = 4;
+                    Box->box[i][j].dis += 1;
                     Box->curt_score += 1 << Box->box[i][j].value;
                     Box->box[i][j + 1].value = 0;
                 }
@@ -168,6 +184,8 @@ void box_move(struct Box* Box, uint8_t dir)
             for (int8_t i = ROW - 1; i >= 0; i--) {
                 if ((Box->box[i][j].value == Box->box[i - 1][j].value) && (Box->box[i][j].value != 0)) {
                     Box->box[i][j].value += 1;
+                    Box->box[i][j].dir = 2;
+                    Box->box[i][j].dis += 1;
                     Box->curt_score += 1 << Box->box[i][j].value;
                     Box->box[i - 1][j].value = 0;
                 }
@@ -191,6 +209,8 @@ void box_move(struct Box* Box, uint8_t dir)
             for (uint8_t j = COLUMN - 1; j >= 1; j--) {
                 if (Box->box[i][j].value == Box->box[i][j - 1].value && Box->box[i][j].value != 0) {
                     Box->box[i][j].value += 1;
+                    Box->box[i][j].dir = 6;
+                    Box->box[i][j].dis += 1;
                     Box->curt_score += 1 << Box->box[i][j].value;
                     Box->box[i][j - 1].value = 0;
                 }
@@ -274,16 +294,16 @@ void create(Block B[ROW][COLUMN])
     for (uint8_t i = 0; i < ROW; i++) {
         for (uint8_t j = 0; j < COLUMN; j++) {
             if (B[i][j].val == 0) {
-                pos[cnt++] = i * 4 + j + 1;
+                pos[cnt++] = i * 4 + j;
             }
         }
     }
     /*在随机空位置里面填入随机(only 2 or 4)数值*/
     if (cnt > 0) {
         //获取空白位置
-        uint16_t p1 = lv_rand(0, cnt);
-        //空白位置赋值
-        Blocks[((pos[p1] - 1) / 4)][((pos[p1] - 1) % 4)].val = lv_rand(0, 9) < 7 ? 1 : 2;
+        uint16_t p1 = lv_rand(0, cnt-1);/* 这里有一个BUG,如果max参数填cnt,程序可能会崩溃 */
+        /* 空白位置赋值 */
+        Blocks[((pos[p1]) / 4)][((pos[p1]) % 4)].val = lv_rand(0, 9) < 7 ? 1 : 2;
     }
 }
 /**
@@ -448,36 +468,53 @@ void lv_app_eleven2(void) {
 
     /*主页面框架*/
     lv_obj_t* main_frame = lv_obj_create(lv_scr_act());
-    lv_obj_set_size(   main_frame, SCREEN_HOR, SCREEN_VER);/*全屏设置*/
-    lv_obj_add_style(  main_frame, &bg_style, 0);
-    lv_obj_clear_flag( main_frame, LV_OBJ_FLAG_SCROLLABLE);
-    lv_obj_set_layout( main_frame, LV_LAYOUT_GRID);
+    /*  */
+    {
+        lv_obj_set_size(main_frame, SCREEN_HOR, SCREEN_VER);/*全屏设置*/
+        lv_obj_add_style(main_frame, &bg_style, 0);
+        lv_obj_clear_flag(main_frame, LV_OBJ_FLAG_SCROLLABLE);
+        lv_obj_set_layout(main_frame, LV_LAYOUT_GRID);
+        /*  */
+        static lv_coord_t col_dsc[] = { LV_GRID_FR(9), LV_GRID_FR(5), LV_GRID_TEMPLATE_LAST };
+        static lv_coord_t row_dsc[] = { LV_GRID_FR(1), LV_GRID_FR(1), LV_GRID_TEMPLATE_LAST };
+        lv_obj_set_grid_dsc_array(main_frame, col_dsc, row_dsc);
 
-    static lv_coord_t col_dsc[] = { LV_GRID_FR(9), LV_GRID_FR(5), LV_GRID_TEMPLATE_LAST };
-    static lv_coord_t row_dsc[] = { LV_GRID_FR(1), LV_GRID_FR(1), LV_GRID_TEMPLATE_LAST };
-    lv_obj_set_grid_dsc_array(main_frame, col_dsc, row_dsc);
+        
 
-    /*菜单面板*/
-    lv_obj_t* main_panel_menu = lv_obj_create(main_frame);
-    lv_obj_clear_flag(main_panel_menu, LV_OBJ_FLAG_SCROLLABLE);
-    /*竖屏设置*/
-    //lv_obj_set_size(main_panel_menu,SCREEN_HOR,(SCREEN_HOR * 9 / 16));
-    lv_obj_set_width(main_panel_menu, SCREEN_HOR);
-    /*游戏主框*/
-    lv_obj_t* main_panel_game = lv_obj_create(main_frame);
-    lv_obj_set_size(main_panel_game, SCREEN_HOR, SCREEN_HOR);
+        /*菜单面板*/
+        lv_obj_t* main_panel_menu = lv_obj_create(main_frame);
+        
+        {
+            lv_obj_clear_flag(main_panel_menu, LV_OBJ_FLAG_SCROLLABLE);
+            lv_obj_set_width(main_panel_menu, SCREEN_HOR);
 
-    lv_obj_t* main_panel_ctrl = lv_obj_create(main_frame);
-    lv_obj_set_width(main_panel_ctrl, SCREEN_HOR);
+            eleven2_menu_create(main_panel_menu);
+        }
 
-    eleven2_obj_set_grid_cell(main_panel_menu, 0, 1, 1, 1, LV_GRID_ALIGN_STRETCH, LV_GRID_ALIGN_STRETCH);    /*菜单布局*/
-    eleven2_obj_set_grid_cell(main_panel_game, 0, 0, 1, 2, LV_GRID_ALIGN_STRETCH, LV_GRID_ALIGN_STRETCH);    /*游戏框布局*/
-    eleven2_obj_set_grid_cell(main_panel_ctrl, 1, 1, 1, 1, LV_GRID_ALIGN_STRETCH, LV_GRID_ALIGN_STRETCH);    /*控制框布局*/
+        /*游戏主框*/
+        lv_obj_t* main_panel_game = lv_obj_create(main_frame);
 
-    /*菜单面板*/
-    eleven2_menu_create(main_panel_menu);
-    eleven2_mainwindow_create(main_panel_game);
-    eleven2_ctrl_buttons_create(main_panel_ctrl);
+        {
+            lv_obj_set_size(main_panel_game, SCREEN_HOR, SCREEN_HOR);
+
+            eleven2_mainwindow_create(main_panel_game);
+        }
+
+        /*控制面板*/
+        lv_obj_t* main_panel_ctrl = lv_obj_create(main_frame);
+
+        {
+            lv_obj_set_width(main_panel_ctrl, SCREEN_HOR);
+
+            eleven2_ctrl_buttons_create(main_panel_ctrl);
+        }
+        
+        eleven2_obj_set_grid_cell(main_panel_menu, 0, 1, 1, 1, LV_GRID_ALIGN_STRETCH, LV_GRID_ALIGN_STRETCH);    /*菜单布局*/
+        eleven2_obj_set_grid_cell(main_panel_game, 0, 0, 1, 2, LV_GRID_ALIGN_STRETCH, LV_GRID_ALIGN_STRETCH);    /*游戏框布局*/
+        eleven2_obj_set_grid_cell(main_panel_ctrl, 1, 1, 1, 1, LV_GRID_ALIGN_STRETCH, LV_GRID_ALIGN_STRETCH);    /*控制框布局*/
+
+    }
+
 }
 /**
  * @brief Menu
@@ -510,28 +547,39 @@ static void eleven2_menu_create(lv_obj_t* parent) {
     lv_style_set_text_align(&score_style, LV_STYLE_ALIGN);
 
     lv_obj_t* _txt;
-    //SCORE板
-    lv_obj_t* score = lv_obj_create(parent);
-    lv_obj_set_size(score, LV_SIZE_CONTENT, LV_SIZE_CONTENT);
-    lv_obj_clear_flag(score, LV_OBJ_FLAG_SCROLLABLE);
-    eleven2mgmt_curtScore = lv_label_create(score);
-    lv_label_set_text_fmt(eleven2mgmt_curtScore, "%d", eleven2mgmt_data_score);
-    lv_obj_center(eleven2mgmt_curtScore);
-    lv_obj_add_style(score, &score_style, 0);
-    //<新游戏>按钮
-    lv_obj_t* restart_btn = lv_btn_create(parent);
-    lv_obj_set_size(restart_btn, LV_SIZE_CONTENT, LV_SIZE_CONTENT);
-    lv_obj_add_style(restart_btn, &btn_style,0);
-    _txt = lv_label_create(restart_btn);
-    lv_label_set_text(_txt, "new");
-    lv_obj_center(_txt);
-    //按钮事件回调
-    lv_obj_add_event_cb(restart_btn,eleven2_restart_event_callback,LV_EVENT_ALL,NULL);
-    
-    /*布局设置*/
-    eleven2_obj_set_grid_cell(score,        0, 0, 1, 1, LV_GRID_ALIGN_STRETCH, LV_GRID_ALIGN_STRETCH);    /*SCORE布局*/
-    eleven2_obj_set_grid_cell(restart_btn,  1, 0, 1, 1, LV_GRID_ALIGN_STRETCH, LV_GRID_ALIGN_STRETCH);    /*按钮布局 */
-    
+
+    {
+        //SCORE板
+        lv_obj_t* score = lv_obj_create(parent);
+
+        {
+            lv_obj_set_size(score, LV_SIZE_CONTENT, LV_SIZE_CONTENT);
+            lv_obj_clear_flag(score, LV_OBJ_FLAG_SCROLLABLE);
+            eleven2mgmt_curtScore = lv_label_create(score);
+            lv_label_set_text_fmt(eleven2mgmt_curtScore, "%d", eleven2mgmt_data_score);
+            lv_obj_center(eleven2mgmt_curtScore);
+            lv_obj_add_style(score, &score_style, 0);
+
+        }
+
+        //<新游戏>按钮
+        lv_obj_t* restart_btn = lv_btn_create(parent);
+
+        {
+            lv_obj_set_size(restart_btn, LV_SIZE_CONTENT, LV_SIZE_CONTENT);
+            lv_obj_add_style(restart_btn, &btn_style, 0);
+            _txt = lv_label_create(restart_btn);
+            lv_label_set_text(_txt, "new");
+            lv_obj_center(_txt);
+            //按钮事件回调
+            lv_obj_add_event_cb(restart_btn, eleven2_restart_event_callback, LV_EVENT_ALL, NULL);
+        }
+
+        /*布局设置*/
+        eleven2_obj_set_grid_cell(score, 0, 0, 1, 1, LV_GRID_ALIGN_STRETCH, LV_GRID_ALIGN_STRETCH);    /*SCORE布局*/
+        eleven2_obj_set_grid_cell(restart_btn, 1, 0, 1, 1, LV_GRID_ALIGN_STRETCH, LV_GRID_ALIGN_STRETCH);    /*按钮布局 */
+    }
+
 }
 
 /**
@@ -590,11 +638,7 @@ static void eleven2_mainwindow_create(lv_obj_t* parent) {
 static void eleven2_ctrl_buttons_create(lv_obj_t* parent) {
 
     /*BackGround*/
-    lv_obj_set_style_bg_color(
-        parent,
-        lv_color_hex(ELEVEN2_THEME_BLOCK_BG),
-        0
-    );
+    lv_obj_set_style_bg_color(parent, lv_color_hex(ELEVEN2_THEME_BLOCK_BG),0);
     lv_obj_set_style_pad_gap(parent, 3, 0);/*方块间距*/
     lv_obj_set_style_outline_width(parent, 0, 0);
     lv_obj_set_layout(parent, LV_LAYOUT_GRID);/*方格布局*/
@@ -665,7 +709,7 @@ static void eleven2_restart_event_callback(lv_event_t* e) {
         init(Blocks);
         create(Blocks);
         update(Blocks);
-        LV_LOG_USER("%d", lv_rand(1, 2) * 2);
+        /*LV_LOG_USER("%d", lv_rand(1, 2) * 2);*/
     }
 }
 
