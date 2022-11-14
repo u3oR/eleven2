@@ -42,8 +42,29 @@ static lv_obj_t* eleven2mgmt_curtScore  = nullptr;
 static uint32_t  eleven2mgmt_data_score = 0;
 
 /*********************
+*  Eleven2 animation
+*********************/
+
+
+static void anim_x_cb(void* var, int32_t v)
+{
+    lv_obj_set_x(var, v);
+}
+
+static void anim_y_cb(void* var, int32_t v)
+{
+    lv_obj_set_y(var, v);
+}
+
+static void anim_size_cb(void* var, int32_t v)
+{
+    lv_obj_set_size(var, v, v);
+}
+
+/*********************
 *  Block 
 *********************/
+
 struct Box_layout
 {
     uint16_t  posx[4][4];
@@ -55,15 +76,50 @@ struct Box_layout
 
 struct box_base {
     uint16_t value;
-    uint8_t dir : 4;/*8W4A2S6D*/
+    uint8_t dir : 3;/*8W4A2S6D*/
     uint8_t dis : 4;
+    uint8_t new : 1;
 };
-struct Box{
+
+struct Box {
     struct box_base box[4][4];
     struct box_base box_backup[4][4];
     uint32_t curt_score;
     uint32_t best_score;
 };
+
+void box_anim_move_callback(struct Box_layout* Box,int i,int j)
+{
+    static lv_anim_t a;
+
+    lv_anim_init(&a);
+    lv_anim_set_var(&a, Box->box[i][j]);
+
+    lv_anim_set_values(&a, lv_obj_get_x(Box->box[i][j]), 0);
+    lv_anim_set_time(&a, 500);
+    lv_anim_set_exec_cb(&a, anim_x_cb);
+    lv_anim_set_path_cb(&a, lv_anim_path_overshoot);
+    lv_anim_start(&a);
+
+    lv_anim_set_values(&a, lv_obj_get_y(Box->box[i][j]), 0);
+    lv_anim_set_time(&a, 500);
+    lv_anim_set_exec_cb(&a, anim_y_cb);
+    lv_anim_start(&a);
+}
+
+void box_anim_create_callback(struct Box_layout* Box, int i, int j)
+{
+    static lv_anim_t a;
+
+    lv_anim_init(&a);
+    lv_anim_set_var(&a, Box->box[i][j]);
+
+    lv_anim_set_values(&a, lv_obj_get_x(Box->box[i][j]), 0);
+    lv_anim_set_time(&a, 500);
+    lv_anim_set_exec_cb(&a, anim_size_cb);
+    lv_anim_set_path_cb(&a, lv_anim_path_overshoot);
+    lv_anim_start(&a);
+}
 
 void box_init(struct Box* Box)
 {
@@ -109,6 +165,9 @@ void box_create(struct Box* Box)
     /*把空的位置都找出来放到pos中*/
     for (uint8_t i = 0; i < ROW; i++) {
         for (uint8_t j = 0; j < COLUMN; j++) {
+
+            Box->box[i][j].new = 0;/*mark to old*/
+
             if (Box->box[i][j].value == 0) {
                 pos[cnt++] = i * 4 + j;
             }
@@ -121,6 +180,8 @@ void box_create(struct Box* Box)
         //空白位置赋值
         Box->box[(pos[p1] / 4)]
                 [(pos[p1] % 4)].value = lv_rand(0, 9) < 7 ? 1 : 2;
+
+        Box->box[(pos[p1] / 4)][(pos[p1] % 4)].new = 1;/*mark to new*/
     }
 }
 
@@ -232,6 +293,8 @@ void box_move(struct Box* Box, uint8_t dir)
         break;
     }
 }
+
+
 
 void box_update(struct Box* Box, struct Box_layout *layout)
 {
@@ -749,6 +812,7 @@ static void eleven2_ctrl_button_event_callback(lv_event_t* e) {
         //    LV_LOG_USER("no update");
         //    return;
         //}
+        update(Blocks);
         create(Blocks);
         update(Blocks);
         lv_label_set_text_fmt(eleven2mgmt_curtScore, "%d", eleven2mgmt_data_score);
